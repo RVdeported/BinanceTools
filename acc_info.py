@@ -38,8 +38,12 @@ def get_positions_str(col = False):
     return out
 
 
-
+def display_help():
+    print("Displays curr positions\nPARAMS: [UpdFreqSec")
 if __name__ == "__main__":
+    if "--help" in sys.argv:
+        display_help()
+        exit(0)
     freq_upd_sec = int(sys.argv[1]) if len(sys.argv) == 2 else 10
     while(True):
         print(get_positions_str(True))        

@@ -4,10 +4,12 @@ from acc_info import get_positions_str
 import time
 import asyncio
 
+
+ID = 0
 with open("bot_keys.txt", "r") as f:
     keys = f.readline()[:-1]
+    ID   = int(f.readline()[:-1])
 
-ID = 829307844
 ACTIVE = False
 async def status(context):
     await context.bot.send_message(ID, text=get_positions_str())
