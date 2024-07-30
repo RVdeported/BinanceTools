@@ -1,2 +1,5 @@
 keys.txt
 __pycache__
+bot_keys.txt
+*.json
+node_modules/
