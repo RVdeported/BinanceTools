@@ -1,6 +1,8 @@
 from acc_info import client, get_positions
 from pprint import pprint
 
+instrs = ["BTCUSDT", "ETHUSDT", "DOGEUSDT", "MATICUSDT", "LINKUSDT",
+          "BNBUSDT", "XRPUSDT", "SOLUSDT",  "FILUSDT"]
 
 def close_positions():
     assets, acc_info = get_positions()
@@ -15,6 +17,8 @@ def close_positions():
             quantity=qty
         )
         pprint(response)
+    for instr in instrs:
+        pprint(client.cancel_open_orders(instr))
 
 if __name__ == "__main__":
     close_positions()
