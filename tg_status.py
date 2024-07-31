@@ -3,7 +3,7 @@ from telegram.ext import Application, ApplicationBuilder, CommandHandler, Contex
 from acc_info import get_positions_str
 import time
 import asyncio
-
+from close_all import close_positions
 
 ID = 0
 with open("bot_keys.txt", "r") as f:
@@ -25,9 +25,12 @@ def active(context):
         return False
     return True
 
+async def close(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    close_positions()
+    await context.bot.send_message(ID, text="Closing orders submitted")
 
 
-async def stop(update, context):
+async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not active(context):
         return False
     current_jobs = context.job_queue.get_jobs_by_name("STATUS")
@@ -40,6 +43,8 @@ app = Application.builder().token(keys).build()
 
 
 app.add_handler(CommandHandler("start", start))
+app.add_handler(CommandHandler("close_all", close))
+
 app.add_handler(CommandHandler("stop", stop))
 
 app.run_polling()
