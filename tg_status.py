@@ -6,7 +6,7 @@ import asyncio
 from close_all import close_positions
 import sys
 
-UM = True
+UM = sys.argv[1] == "um"
 ID = 0
 with open("bot_keys.txt", "r") as f:
     keys = f.readline()[:-1]
@@ -46,7 +46,6 @@ if len(sys.argv) != 2 or sys.argv[1] not in ["cm", "um"]:
     print("Choose cm or um")
     exit(0)
 
-UM = sys.argv[1] == "cm"
 
 app = Application.builder().token(keys).build()
 
