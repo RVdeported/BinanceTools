@@ -14,7 +14,6 @@ with open("bot_keys.txt", "r") as f:
 
 ACTIVE = False
 async def status(context):
-    print(UM)
     await context.bot.send_message(ID, text="CURR_POS:\n" + get_positions_str(UM))
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
