@@ -17,9 +17,10 @@ def display_help():
 
 def close_positions(UM):
     assets, _ = get_positions(UM)
+    client = clientUM if UM else clientCM
     for pos in assets:
         symbol = pos["symbol"]
-        side   = "SELL" if float(pos["initialMargin"]) > 0 else "BUY"
+        side   = "SELL" if float(pos["positionAmt"]) > 0 else "BUY"
         qty    = abs(float(pos["positionAmt"]))
         response = client.new_order(
             symbol=symbol,
@@ -38,6 +39,5 @@ if __name__ == "__main__":
         exit(1)
     
     UM = sys.argv[1] == "um" if len(sys.argv) > 1 else True
-    client = clientUM if UM else clientCM
 
     close_positions(UM)
