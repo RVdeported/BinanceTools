@@ -16,6 +16,7 @@ INSTR_PRICE = {
         "FIL" : 3.5,
         "ADA" : 0.33,
         "AVA" : 20.6,
+        "BNB" : 520,
         "USDT":1,
         "USD" :1
     }
@@ -55,7 +56,6 @@ def get_positions_str(UM = True, col = False):
             abs(float(n["notional"])) if UM else
                 float(n["initialMargin"]) 
             ) * 100
-        print(upnl_perc)
         s = "{}:\tentryPx:{}\tAmnt:{}\tUPNL:{:.2f}({:.2f}%)\tNotional:{}\n"\
                 .format(n["symbol"], n["entryPrice"],n["positionAmt"], 
                         upnl, upnl_perc, 
