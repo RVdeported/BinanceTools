@@ -9,6 +9,13 @@ INSTR_PRICE = {
         "ETH" : 3000,
         "DOGE": 0.1,
         "MATIC":0.45,
+        "SOL" : 140,
+        "XRP" : 0.5,
+        "LTC" : 60,
+        "LINK": 10,
+        "FIL" : 3.5,
+        "ADA" : 0.33,
+        "AVA" : 20.6,
         "USDT":1,
         "USD" :1
     }
