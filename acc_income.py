@@ -1,6 +1,7 @@
-from acc_info import clientCM, clientUM
+from acc_info import clientCM, clientUM, INSTR_PRICE
 import sys
 import datetime as dt
+
 
 def display_help():
     print("Prints income for a specified preceeded hours")
@@ -20,12 +21,11 @@ if __name__ == "__main__":
     
     hours = int(sys.argv[2])
     startTs = dt.datetime.now() - dt.timedelta(hours=hours)
-    print(startTs.timestamp())
-    res = client.get_income_history(startTime=int(startTs.timestamp() * 1000))
+    res = client.get_income_history(startTime=int(startTs.timestamp() * 1000), limit=1000)
     
     income = 0
     for n in res:
-        income += float(n["income"])
+        income += float(n["income"]) * INSTR_PRICE[n["asset"]]
 
     print(f"Total income starting from {startTs.timestamp()} is {income}")
 

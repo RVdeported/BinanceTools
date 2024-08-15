@@ -4,6 +4,16 @@ import time
 from termcolor import colored
 import sys
 
+INSTR_PRICE = {
+        "BTC" : 60000,
+        "ETH" : 3000,
+        "DOGE": 0.1,
+        "MATIC":0.45,
+        "USDT":1,
+        "USD" :1
+    }
+
+
 def read_keys():
     with open("keys.txt", "r") as f:
         public = f.readline()[:-1]
@@ -31,14 +41,17 @@ def get_positions_str(UM = True, col = False):
                 float(acc_info["availableBalance"]) + 
                 float(acc_info["totalInitialMargin"]))
     for n in assets:
+        instr_short = n["symbol"][:n["symbol"].find("USD")]
+        upnl        = float(n["unrealizedProfit"]) * \
+            (1.0 if UM else INSTR_PRICE[instr_short])
+        upnl_perc   = (upnl if UM else float(n["unrealizedProfit"])) / (
+            abs(float(n["notional"])) if UM else
+                float(n["initialMargin"]) 
+            ) * 100
+        print(upnl_perc)
         s = "{}:\tentryPx:{}\tAmnt:{}\tUPNL:{:.2f}({:.2f}%)\tNotional:{}\n"\
                 .format(n["symbol"], n["entryPrice"],n["positionAmt"], 
-                        float(n["unrealizedProfit"]), 
-                        float(n["unrealizedProfit"]) \
-                            / (abs(float(n["notional"])) * 100.0
-                               if UM else
-                               float(n["initialMargin"])
-                        ),
+                        upnl, upnl_perc, 
                         n["notional"] if UM else 0)        
         color = "green" if float(n["positionAmt"]) > 0 else "yellow"
         out += colored(s, color ) if col else s
