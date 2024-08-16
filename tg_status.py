@@ -47,8 +47,8 @@ async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return True
 
 
-if len(sys.argv) != 2 or sys.argv[1] not in ["cm", "um"]:
-    print("Choose cm or um")
+if len(sys.argv) != 3 or sys.argv[1] not in ["cm", "um"]:
+    print("Choose cm or um and provide file with bot keys")
     exit(0)
 
 
