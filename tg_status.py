@@ -14,11 +14,18 @@ with open("bot_keys.txt", "r") as f:
 
 ACTIVE = False
 async def status(context):
-    await context.bot.send_message(ID, text="CURR_POS:\n" + get_positions_str(UM))
+    await context.bot.send_message(context.chat_data["user_id"], 
+            text="CURR_POS:\n" + get_positions_str(UM))
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not active(context):
-        context.job_queue.run_repeating(status, 30, chat_id=ID, name="STATUS")
+    print(update.effective_chat.id)
+    context.chat_data.update({
+        "user_id" : update.effective_chat.id,
+        "name"    : "STATUS_" + str(update.effective_chat.id)
+    })
+    context.job_queue.run_repeating(status, 30, 
+        chat_id=context.chat_data["user_id"], 
+        name=context.chat_data["name"])
 
 def active(context):
     current_jobs = context.job_queue.get_jobs_by_name("STATUS")
@@ -33,9 +40,8 @@ async def close(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not active(context):
-        return False
-    current_jobs = context.job_queue.get_jobs_by_name("STATUS")
+    print(context.chat_data)
+    current_jobs = context.job_queue.get_jobs_by_name(context.chat_data["name"])
     for job in current_jobs:
         job.schedule_removal()
     await update.message.reply_text("Upd Stop sent")
