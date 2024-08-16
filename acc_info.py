@@ -59,7 +59,9 @@ def get_positions_str(UM = True, col = False):
         s = "{}:\tentryPx:{}\tAmnt:{}\tUPNL:{:.2f}({:.2f}%)\tNotional:{}\n"\
                 .format(n["symbol"], n["entryPrice"],n["positionAmt"], 
                         upnl, upnl_perc, 
-                        n["notional"] if UM else 0)        
+                        n["notional"] if UM else 
+                            n["positionAmt"] * 
+                            (100 if n["symbol"] == "BTCUSD_PERP" else 10))        
         color = "green" if float(n["positionAmt"]) > 0 else "yellow"
         out += colored(s, color ) if col else s
 
