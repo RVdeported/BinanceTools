@@ -40,6 +40,8 @@ async def close(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print(context.chat_data)
+    if "name" not in context.chat_data:
+        return
     current_jobs = context.job_queue.get_jobs_by_name(context.chat_data["name"])
     for job in current_jobs:
         job.schedule_removal()
