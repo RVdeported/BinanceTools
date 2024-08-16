@@ -7,7 +7,7 @@ from close_all import close_positions
 import sys
 
 UM = sys.argv[1] == "um"
-with open("bot_keys.txt", "r") as f:
+with open(sys.argv[2], "r") as f:
     keys = f.readline()[:-1]
 
 ACTIVE = False
