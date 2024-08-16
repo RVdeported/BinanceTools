@@ -52,16 +52,13 @@ def get_positions_str(UM = True, col = False):
         instr_short = n["symbol"][:n["symbol"].find("USD")]
         upnl        = float(n["unrealizedProfit"]) * \
             (1.0 if UM else INSTR_PRICE[instr_short])
-        upnl_perc   = (upnl if UM else float(n["unrealizedProfit"])) / (
-            abs(float(n["notional"])) if UM else
-                float(n["initialMargin"]) 
-            ) * 100
+        notional    = float(n["positionAmt"]) * (1.0 if UM else
+                            (100 if n["symbol"] == "BTCUSD_PERP" else 10))
+        upnl_perc   = upnl / abs(notional) * 100
         s = "{}:\tentryPx:{}\tAmnt:{}\tUPNL:{:.2f}({:.2f}%)\tNotional:{}\n"\
                 .format(n["symbol"], n["entryPrice"],n["positionAmt"], 
-                        upnl, upnl_perc, 
-                        n["notional"] if UM else 
-                            float(n["positionAmt"]) * 
-                            (100 if n["symbol"] == "BTCUSD_PERP" else 10))        
+                        upnl, upnl_perc, notional 
+                        )        
         color = "green" if float(n["positionAmt"]) > 0 else "yellow"
         out += colored(s, color ) if col else s
 
