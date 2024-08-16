@@ -60,7 +60,7 @@ def get_positions_str(UM = True, col = False):
                 .format(n["symbol"], n["entryPrice"],n["positionAmt"], 
                         upnl, upnl_perc, 
                         n["notional"] if UM else 
-                            n["positionAmt"] * 
+                            float(n["positionAmt"]) * 
                             (100 if n["symbol"] == "BTCUSD_PERP" else 10))        
         color = "green" if float(n["positionAmt"]) > 0 else "yellow"
         out += colored(s, color ) if col else s
@@ -84,4 +84,3 @@ if __name__ == "__main__":
     while(True):
         print(get_positions_str(UM, True))        
         time.sleep(freq_upd_sec)
-
