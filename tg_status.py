@@ -7,10 +7,8 @@ from close_all import close_positions
 import sys
 
 UM = sys.argv[1] == "um"
-ID = 0
 with open("bot_keys.txt", "r") as f:
     keys = f.readline()[:-1]
-    ID   = int(f.readline()[:-1])
 
 ACTIVE = False
 async def status(context):
@@ -36,7 +34,8 @@ def active(context):
 
 async def close(update: Update, context: ContextTypes.DEFAULT_TYPE):
     close_positions(UM)
-    await context.bot.send_message(ID, text="Closing orders submitted")
+    await context.bot.send_message(context.chat_data["user_id"], 
+            text="Closing orders submitted")
 
 
 async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE):
