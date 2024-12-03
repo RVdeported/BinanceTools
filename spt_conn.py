@@ -3,7 +3,7 @@ from pprint import pprint
 import time
 import sys
 
-NO_CLOSE = ["BTC", "USDT", "BNB"]
+NO_CLOSE = ["BTC", "USDT", "BNB", "ETH"]
 NO_REPAY = ["ZRO", "CVX"]
 KLINES   = [
     "ZROUSDT", "LEVERUSDT", "PEPEUSDT", "CVXUSDT",  "HBARUSDT",
@@ -13,13 +13,14 @@ KLINES   = [
     "XVGUSDT", "FARMUSDT",  "MLNUSDT",  "JASMYUSDT","ZRXUSDT",
     "NTRNUSDT","WUSDT",     "BLURUSDT", "FTTUSDT",  "ICPUSDT",
     "DCRUSDT", "TIAUSDT",   "NFPUSDT",  "ALPACAUSDT","BANANAUSDT",
-    "SFPUSDT"
+    "SFPUSDT", "EOSUSDT"
 ]
 
-api_key     = []
+api_key     = [
+]
 
-
-api_secret  = []
+api_secret  = [
+]
 
 client = None 
 def mrg_info():
@@ -33,20 +34,45 @@ def mrg_info():
 
     return res
 
-def get_orders():
-    return client.margin_open_orders()
+def spt_info():
+    res = client.user_asset()
+    return res
 
-def trade(symbol, qty):
+def get_orders(type):
+    if (type == "SPT"):
+        return client.open_orders()
+    elif (type == "MRG"):
+        return client.margin_open_orders()
+    else:
+        raise Exception(f"INCORRECT TYPE: {type}")
+
+
+def trade(symbol, qty, type):
     qty = adjToLotSz(symbol, float(qty))
 
     if (qty == 0.0): return
     print(f"TRADING {symbol} {qty}")
-    return client.new_margin_order(
-        symbol = symbol,
-        side   = "BUY" if qty > 0 else "SELL",
-        type   = "MARKET",
-        quantity = abs(qty)
-    )
+    if (type not in ["SPT", "MRG"]):
+        raise Exception(f"INCORRECT TRADE TYPE: {type}")
+
+    args = {
+        "symbol" : symbol,
+        "side"   : "BUY" if qty > 0 else "SELL",
+        "type"   : "MARKET",
+        "quantity": abs(qty)
+    }
+    
+    if (type == "SPT"):
+        return client.new_order(**args)
+    else:
+        return client.new_margin_order(**args)
+
+def tradeSpt(symbol, qty):
+    return trade(symbol, qty, "SPT")
+
+def tradeMrg(symbol, qty):
+    return trade(symbol, qty, "MRG")
+
 
 def getVol(interv):
     symbs = []
@@ -85,22 +111,38 @@ def adjToLotSz(symbol, qty):
     return round(q, 5)
 
 
-def close_pos():
-    inf = mrg_info()
-    for pos in inf["userAssets"]:
+def close_pos(type):
+    if type not in ["SPT", "MRG"]: 
+        raise Exception(f"INCORRECT TYPE: {type}")
+    inf = mrg_info() if type == "MRG" else spt_info()
+    assets = inf["userAssets"]  if type == "MRG" else inf
+    for pos in inf:
         if pos["asset"] in NO_CLOSE:
             continue
 
         if (pos["free"] == '0'):
             continue
         print(f"Closing {pos['asset']} {pos['free']}")
-        pprint(trade(pos["asset"] + "USDT", -float(pos["free"])))
+        pprint(trade(pos["asset"] + "USDT", -float(pos["free"]), type))
 
+def close_pos_spt():
+    return close_pos("SPT") 
 
-def cancel_orders():
-    ords = get_orders()
+def clsoe_pos_mrg():
+    return close_pos("MRG")
+    
+
+def cancel_orders(type):
+    ords = get_orders(type)
     for ord in ords:
-        client.cancel_margin_order(symbol=ord["symbol"], origClientOrderId=ord["clientOrderId"])
+        arg = { "symbol"             : ord["symbol"], 
+                "origClientOrderId"  : ord["clientOrderId"]}
+        if (type =="SPT"):
+            client.cancel_order(*arg)
+        elif (type == "MRG"):
+            client.cancel_margin_order(*arg)
+        else:
+            raise Exception(f"INCORRECT TYPE {type}")
 
 def repay():
     inf = mrg_info()
@@ -134,19 +176,24 @@ def repay():
         client.borrow_repay(asset=ass["asset"], isIsolated="FALSE", 
                     symbol=ass['asset'] + "USDT", amount=borr, type="REPAY")
 
-def reset():
-    cancel_orders()
+def reset(type):
+    cancel_orders(type)
     time.sleep(1.0)
-    repay()
+
+    if (type == "MRG"):
+        repay()
+        time.sleep(1.0)
+    close_pos(type)
     time.sleep(1.0)
-    close_pos()
-    time.sleep(1.0)
-    pprint(mrg_info())
+    if (type == "SPT"):
+        pprint(spt_info())
+    else:
+        pprint(mrg_info())
 
 
 def help():
-    print("USAGE: [api_key_set [command+args\nreset\norders\ncancel\ntrade [symbol [qty" + 
-            "\nclose\npositions\nrepay\nvol [interval\n")
+    print("USAGE: [api_key_set [command+args\nreset{mrg|spt}\norders{mrg|spt}\ncancel{mrg|spt}\ntrade{mrg|spt} [symbol [qty" + 
+            "\nclose{mrg|spt}\npositions{mrg|spt}\nrepay\nvol [interval\n")
 
 if __name__ == "__main__":
     args = sys.argv
@@ -159,21 +206,35 @@ if __name__ == "__main__":
     args[2] = args[2].lower()
     # client.borrow_repay(asset="ZRO", isIsolated="FALSE", 
     #                 symbol="ZROUSDT", amount=25.0, type="REPAY")
-    if   (args[2] == "reset"):
-        pprint(reset())
-    elif (args[2] == "orders"):
-        pprint(get_orders())
-    elif (args[2] == "cancel"):
-        pprint(cancel_orders())
-    elif (args[2] == "trade"):
+    if   (args[2] == "resetspt"):
+        pprint(reset("SPT"))
+    elif   (args[2] == "resetmrg"):
+        pprint(reset("MRG"))
+    elif (args[2] == "ordersspt"):
+        pprint(get_orders("SPT"))
+    elif (args[2] == "ordersmrg"):
+        pprint(get_orders("MRG"))
+    elif (args[2] == "cancelspt"):
+        pprint(cancel_orders("SPT"))
+    elif (args[2] == "cancelmrg"):
+        pprint(cancel_orders("MRG"))
+    elif (args[2] == "tradespt"):
         if (len(args) < 5):
             help()
             exit(0)
-        pprint(trade(args[3], float(args[4])))
-    elif (args[2] == "close"):
-        pprint(close_pos())
+        pprint(tradeSpt(args[3], float(args[4])))
+    elif (args[2] == "trademrg"):
+        if (len(args) < 5):
+            help()
+            exit(0)
+        pprint(tradeMrg(args[3], float(args[4])))
+    elif (args[2] == "closespt"):
+        pprint(close_pos("SPT"))
+    elif (args[2] == "closemrg"):
+        pprint(close_pos("MRG"))
     elif (args[2] == "positions"):
         pprint(mrg_info())
+        pprint(spt_info())
     elif (args[2] == "repay"):
         pprint(repay())
     elif (args[2] == "vol"):
