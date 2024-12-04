@@ -4,7 +4,7 @@ import time
 import sys
 
 NO_CLOSE = ["BTC", "USDT", "BNB", "ETH"]
-NO_REPAY = ["ZRO", "CVX"]
+NO_REPAY = ["ZRO",]
 KLINES   = [
     "ZROUSDT", "LEVERUSDT", "PEPEUSDT", "CVXUSDT",  "HBARUSDT",
     "KAIAUSDT","EOSUSDT",   "FXSUSDT",  "IDEXUSDT", "THEUSDT",
@@ -13,7 +13,8 @@ KLINES   = [
     "XVGUSDT", "FARMUSDT",  "MLNUSDT",  "JASMYUSDT","ZRXUSDT",
     "NTRNUSDT","WUSDT",     "BLURUSDT", "FTTUSDT",  "ICPUSDT",
     "DCRUSDT", "TIAUSDT",   "NFPUSDT",  "ALPACAUSDT","BANANAUSDT",
-    "SFPUSDT", "EOSUSDT"
+    "SFPUSDT", "EOSUSDT",   "SNTUSDT",  "CAKEUSDT", "BNXUSDT",
+    "SLPUSDT"
 ]
 
 api_key     = [
@@ -40,7 +41,7 @@ def spt_info():
 
 def get_orders(type):
     if (type == "SPT"):
-        return client.open_orders()
+        return client.get_open_orders()
     elif (type == "MRG"):
         return client.margin_open_orders()
     else:
@@ -115,7 +116,7 @@ def close_pos(type):
     if type not in ["SPT", "MRG"]: 
         raise Exception(f"INCORRECT TYPE: {type}")
     inf = mrg_info() if type == "MRG" else spt_info()
-    assets = inf["userAssets"]  if type == "MRG" else inf
+    inf = inf["userAssets"]  if type == "MRG" else inf
     for pos in inf:
         if pos["asset"] in NO_CLOSE:
             continue
@@ -135,12 +136,12 @@ def clsoe_pos_mrg():
 def cancel_orders(type):
     ords = get_orders(type)
     for ord in ords:
-        arg = { "symbol"             : ord["symbol"], 
+        arg_ = { "symbol"             : ord["symbol"], 
                 "origClientOrderId"  : ord["clientOrderId"]}
         if (type =="SPT"):
-            client.cancel_order(*arg)
+            client.cancel_order(**arg_)
         elif (type == "MRG"):
-            client.cancel_margin_order(*arg)
+            client.cancel_margin_order(**arg_)
         else:
             raise Exception(f"INCORRECT TYPE {type}")
 
@@ -161,7 +162,7 @@ def repay():
         if (free < borr):
             smbl = ass["asset"] + "USDT"
             qty = adjToLotSz(smbl, borr - free)
-            trade(ass["asset"] + "USDT", qty)
+            trade(ass["asset"] + "USDT", qty, "MRG")
            
             time.sleep(1.5)
         
