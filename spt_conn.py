@@ -4,7 +4,7 @@ import time
 import sys
 
 NO_CLOSE = ["BTC", "USDT", "BNB", "ETH"]
-NO_REPAY = ["ZRO",]
+NO_REPAY = ["IOTA", "CVX", "KAIA"]
 KLINES   = [
     "ZROUSDT", "LEVERUSDT", "PEPEUSDT", "CVXUSDT",  "HBARUSDT",
     "KAIAUSDT","EOSUSDT",   "FXSUSDT",  "IDEXUSDT", "THEUSDT",
@@ -14,7 +14,7 @@ KLINES   = [
     "NTRNUSDT","WUSDT",     "BLURUSDT", "FTTUSDT",  "ICPUSDT",
     "DCRUSDT", "TIAUSDT",   "NFPUSDT",  "ALPACAUSDT","BANANAUSDT",
     "SFPUSDT", "EOSUSDT",   "SNTUSDT",  "CAKEUSDT", "BNXUSDT",
-    "SLPUSDT"
+    "SLPUSDT", "CLVUSDT",   "YFIUSDT",  "PONDUSDT"
 ]
 
 api_key     = [
@@ -168,7 +168,7 @@ def repay():
         
         if (borr <= 0.000001):
             return
-        borr = round(borr * 0.98, 4)
+        borr = round(borr + intr, 9)
 
         print(f"Repaying {ass['asset']} int amnt {borr}")
         
@@ -191,10 +191,31 @@ def reset(type):
     else:
         pprint(mrg_info())
 
+def limit(symbol, qty, px, type):
+    qty = adjToLotSz(symbol, qty)
+    params = {
+        "symbol"        : symbol,
+        "side"          : "BUY" if qty > 0 else "SELL",
+        "quantity"      : abs(qty),
+        "type"          : "LIMIT",
+        "price"         : px,
+        "timeInForce"   : "GTC"
+    }
+    
+    if   (type == "MRG"):
+        return client.new_margin_order(**params)
+    elif (type == "SPT"):
+        return client.new_order(**params)
+
+    return None
+
+def dust(symbol):
+    
+    return None
 
 def help():
     print("USAGE: [api_key_set [command+args\nreset{mrg|spt}\norders{mrg|spt}\ncancel{mrg|spt}\ntrade{mrg|spt} [symbol [qty" + 
-            "\nclose{mrg|spt}\npositions{mrg|spt}\nrepay\nvol [interval\n")
+            "\nclose{mrg|spt}\npositions{mrg|spt}\nrepay\nvol [interval\nlimit{mrg|spt} [symbol [qty [px\n")
 
 if __name__ == "__main__":
     args = sys.argv
@@ -203,7 +224,7 @@ if __name__ == "__main__":
         exit()
     
     client = Client(api_key[int(args[1])-1], api_secret[int(args[1])-1])
-
+    
     args[2] = args[2].lower()
     # client.borrow_repay(asset="ZRO", isIsolated="FALSE", 
     #                 symbol="ZROUSDT", amount=25.0, type="REPAY")
@@ -243,6 +264,11 @@ if __name__ == "__main__":
             help()
             exit()
         pprint(getVol(args[3]))
+    elif (args[2][:5] == "limit"):
+        if (len(args) < 6):
+            help()
+            exit(0)
+        pprint(limit(args[3], float(args[4]), float(args[5]), args[2][-3:].upper()))
     else:
         help()
 
