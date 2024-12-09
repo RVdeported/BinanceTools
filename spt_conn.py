@@ -14,7 +14,8 @@ KLINES   = [
     "NTRNUSDT","WUSDT",     "BLURUSDT", "FTTUSDT",  "ICPUSDT",
     "DCRUSDT", "TIAUSDT",   "NFPUSDT",  "ALPACAUSDT","BANANAUSDT",
     "SFPUSDT", "EOSUSDT",   "SNTUSDT",  "CAKEUSDT", "BNXUSDT",
-    "SLPUSDT", "CLVUSDT",   "YFIUSDT",  "PONDUSDT"
+    "SLPUSDT", "CLVUSDT",   "YFIUSDT",  "PONDUSDT", "MEMEUSDT",
+    "ATOMUSDT", 
 ]
 
 api_key     = [
@@ -38,6 +39,22 @@ def mrg_info():
 def spt_info():
     res = client.user_asset()
     return res
+
+def positions():
+    assets = mrg_info()["userAssets"]
+
+    s = 0.0
+    for ass in assets:
+        symb = ass["asset"]
+        px = float(client.klines(symb + "USDT", "1m", limit=1)[0][4]) \
+            if symb != "USDT" else 1.0
+
+        qt = float(ass["netAsset"])
+        amnt = qt * px
+        s   += amnt
+        print(f"{symb}\t{qt}\t{amnt}")
+
+    print(f"Total: {s}")
 
 def get_orders(type):
     if (type == "SPT"):
@@ -215,7 +232,7 @@ def dust(symbol):
 
 def help():
     print("USAGE: [api_key_set [command+args\nreset{mrg|spt}\norders{mrg|spt}\ncancel{mrg|spt}\ntrade{mrg|spt} [symbol [qty" + 
-            "\nclose{mrg|spt}\npositions{mrg|spt}\nrepay\nvol [interval\nlimit{mrg|spt} [symbol [qty [px\n")
+            "\nclose{mrg|spt}\npositions{mrg|spt}\nrepay\nvol [interval\nlimit{mrg|spt} [symbol [qty [px\nposslim\n")
 
 if __name__ == "__main__":
     args = sys.argv
@@ -269,6 +286,8 @@ if __name__ == "__main__":
             help()
             exit(0)
         pprint(limit(args[3], float(args[4]), float(args[5]), args[2][-3:].upper()))
+    elif (args[2] == "posslim"):
+        positions()
     else:
         help()
 
