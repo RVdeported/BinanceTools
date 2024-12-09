@@ -2,6 +2,8 @@ from binance.spot import Spot as Client
 from pprint import pprint
 import time
 import sys
+import re
+import os
 
 NO_CLOSE = ["BTC", "USDT", "BNB", "ETH"]
 NO_REPAY = ["IOTA", "CVX", "KAIA"]
@@ -15,7 +17,7 @@ KLINES   = [
     "DCRUSDT", "TIAUSDT",   "NFPUSDT",  "ALPACAUSDT","BANANAUSDT",
     "SFPUSDT", "EOSUSDT",   "SNTUSDT",  "CAKEUSDT", "BNXUSDT",
     "SLPUSDT", "CLVUSDT",   "YFIUSDT",  "PONDUSDT", "MEMEUSDT",
-    "ATOMUSDT", 
+    "ATOMUSDT","TLMUSDT" 
 ]
 
 api_key     = [
@@ -23,6 +25,11 @@ api_key     = [
 
 api_secret  = [
 ]
+
+reg = re.compile(r"PDCA::MakeOrders: Instr=([A-Z]{5,10}) Quoting Side=[a-zA-Z]{3}[\s\S].*Pos=(-{0,1}[\d]{1,6}\.{0,1}[\d]{0,10})")
+
+PATH_LOGS = "~/Maquette/MAQUETTE-Strats/Logs/"
+# PATH_LOGS = "~/log_"
 
 client = None 
 def mrg_info():
@@ -40,10 +47,16 @@ def spt_info():
     res = client.user_asset()
     return res
 
-def positions():
+def positions(id):
     assets = mrg_info()["userAssets"]
 
     s = 0.0
+    posLog = {}
+    log_name = PATH_LOGS + "pdca_" + str(id) + "\/Strat.log"
+    log_name = PATH_LOGS + "pdca" + "\/Strat.log"
+    os.system(f"tail {log_name} -n 500 > tmp.txt")
+    lines = open("tmp.txt", "r").readlines()
+    
     for ass in assets:
         symb = ass["asset"]
         px = float(client.klines(symb + "USDT", "1m", limit=1)[0][4]) \
@@ -52,9 +65,18 @@ def positions():
         qt = float(ass["netAsset"])
         amnt = qt * px
         s   += amnt
-        print(f"{symb}\t{qt}\t{amnt}")
+        
+        actualQt = None
+        for l in reversed(lines):
+            match = reg.findall(l)
+            if (len(match) > 0 and match[0][0] == symb + "USDT"):
+                actualQt = float(match[0][1])
+                break
+
+        print(f"{symb}\t{qt}\t{round(amnt, 1)}\t{actualQt}")
 
     print(f"Total: {s}")
+    os.remove("tmp.txt")
 
 def get_orders(type):
     if (type == "SPT"):
@@ -287,7 +309,7 @@ if __name__ == "__main__":
             exit(0)
         pprint(limit(args[3], float(args[4]), float(args[5]), args[2][-3:].upper()))
     elif (args[2] == "posslim"):
-        positions()
+        positions(int(args[1]))
     else:
         help()
 
