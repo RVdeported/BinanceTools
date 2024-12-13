@@ -4,6 +4,7 @@ import time
 import sys
 import re
 import os
+from math import ceil
 
 NO_CLOSE = ["BTC", "USDT", "BNB", "ETH"]
 NO_REPAY = ["IOTA", "CVX", "KAIA"]
@@ -21,7 +22,7 @@ KLINES   = [
 ]
 
 api_key     = [
-]
+        ]
 
 api_secret  = [
 ]
@@ -105,6 +106,7 @@ def trade(symbol, qty, type):
     if (type == "SPT"):
         return client.new_order(**args)
     else:
+        args["sideEffectType"] = "MARGIN_BUY"
         return client.new_margin_order(**args)
 
 def tradeSpt(symbol, qty):
@@ -127,7 +129,7 @@ def getVol(interv):
 
 
 
-def adjToLotSz(symbol, qty):
+def adjToLotSz(symbol, qty, roundUp = False):
     inf = client.exchange_info(symbol=symbol)
     lotSz = -1
     minNotional = -1.0
@@ -141,14 +143,17 @@ def adjToLotSz(symbol, qty):
     if (lotSz <= 0):
         raise Exception(f"Could not determine {symbol} lotSz")
     
-    q = (abs(qty) // lotSz) * lotSz
+    q = ceil(abs(qty) / lotSz) * lotSz
+    if (roundUp):
+        q = max(minNotional, q)
     q *= -1.0 if qty < 0 else 1.0
 
     px = float(client.avg_price(symbol)["price"])
+    
     if minNotional > abs(q) * px:
         return 0.0
 
-    return round(q, 5)
+    return round(q, 7)
 
 
 def close_pos(type):
@@ -198,9 +203,9 @@ def repay():
         intr = float(ass["interest"])
         
         # borr -= intr
-        if (free < borr):
+        if (free < borr + intr):
             smbl = ass["asset"] + "USDT"
-            qty = adjToLotSz(smbl, borr - free)
+            qty = adjToLotSz(smbl, borr + intr - free, True)
             trade(ass["asset"] + "USDT", qty, "MRG")
            
             time.sleep(1.5)
