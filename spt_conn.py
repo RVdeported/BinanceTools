@@ -7,7 +7,7 @@ import os
 from math import ceil
 
 NO_CLOSE = ["BTC", "USDT", "BNB", "ETH"]
-NO_REPAY = ["IOTA", "CVX", "KAIA"]
+NO_REPAY = []
 KLINES   = [
     "ZROUSDT", "LEVERUSDT", "PEPEUSDT", "CVXUSDT",  "HBARUSDT",
     "KAIAUSDT","EOSUSDT",   "FXSUSDT",  "IDEXUSDT", "THEUSDT",
@@ -22,7 +22,7 @@ KLINES   = [
 ]
 
 api_key     = [
-        ]
+]
 
 api_secret  = [
 ]
@@ -54,7 +54,7 @@ def positions(id):
     s = 0.0
     posLog = {}
     log_name = PATH_LOGS + "pdca_" + str(id) + "\/Strat.log"
-    log_name = PATH_LOGS + "pdca" + "\/Strat.log"
+    # log_name = PATH_LOGS + "pdca" + "\/Strat.log"
     os.system(f"tail {log_name} -n 500 > tmp.txt")
     lines = open("tmp.txt", "r").readlines()
     
@@ -79,7 +79,7 @@ def positions(id):
     print(f"Total: {s}")
     os.remove("tmp.txt")
 
-def get_orders(type):
+def _get_orders(type):
     if (type == "SPT"):
         return client.get_open_orders()
     elif (type == "MRG"):
@@ -87,6 +87,12 @@ def get_orders(type):
     else:
         raise Exception(f"INCORRECT TYPE: {type}")
 
+def get_orders(type):
+    res = _get_orders(type)
+    print("Instr\tSide\tQt\tPx\tid")
+    for r in res:
+        print(f"{r['symbol']}\t{r['side']}\t{r['origQty']}\t"
+            + f"{r['price']}\t{r['clientOrderId']}")
 
 def trade(symbol, qty, type):
     qty = adjToLotSz(symbol, float(qty))
@@ -247,6 +253,7 @@ def limit(symbol, qty, px, type):
     }
     
     if   (type == "MRG"):
+        params["sideEffectType"] = "MARGIN_BUY"
         return client.new_margin_order(**params)
     elif (type == "SPT"):
         return client.new_order(**params)
