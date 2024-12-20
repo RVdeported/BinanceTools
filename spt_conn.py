@@ -93,6 +93,7 @@ def get_orders(type):
     for r in res:
         print(f"{r['symbol']}\t{r['side']}\t{r['origQty']}\t"
             + f"{r['price']}\t{r['clientOrderId']}")
+    return res
 
 def trade(symbol, qty, type):
     qty = adjToLotSz(symbol, float(qty))
@@ -284,9 +285,9 @@ if __name__ == "__main__":
     elif   (args[2] == "resetmrg"):
         pprint(reset("MRG"))
     elif (args[2] == "ordersspt"):
-        pprint(get_orders("SPT"))
+        get_orders("SPT")
     elif (args[2] == "ordersmrg"):
-        pprint(get_orders("MRG"))
+        get_orders("MRG")
     elif (args[2] == "cancelspt"):
         pprint(cancel_orders("SPT"))
     elif (args[2] == "cancelmrg"):
