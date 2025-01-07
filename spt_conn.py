@@ -21,11 +21,13 @@ KLINES   = [
     "ATOMUSDT","TLMUSDT" 
 ]
 
-api_key     = [
+api_key  = [
 ]
+
 
 api_secret  = [
 ]
+
 
 reg = re.compile(r"PDCA::MakeOrders: Instr=([A-Z]{5,10}) Quoting Side=[a-zA-Z]{3}[\s\S].*Pos=(-{0,1}[\d]{1,6}\.{0,1}[\d]{0,10})")
 
@@ -138,6 +140,7 @@ def getVol(interv):
 
 def adjToLotSz(symbol, qty, roundUp = False):
     inf = client.exchange_info(symbol=symbol)
+    px = float(client.avg_price(symbol)["price"])
     lotSz = -1
     minNotional = -1.0
     for n in inf["symbols"][0]["filters"]:
@@ -152,10 +155,9 @@ def adjToLotSz(symbol, qty, roundUp = False):
     
     q = ceil(abs(qty) / lotSz) * lotSz
     if (roundUp):
-        q = max(minNotional, q)
+        q = max(minNotional / px, q)
     q *= -1.0 if qty < 0 else 1.0
 
-    px = float(client.avg_price(symbol)["price"])
     
     if minNotional > abs(q) * px:
         return 0.0
@@ -276,7 +278,7 @@ if __name__ == "__main__":
         exit()
     
     client = Client(api_key[int(args[1])-1], api_secret[int(args[1])-1])
-    
+   
     args[2] = args[2].lower()
     # client.borrow_repay(asset="ZRO", isIsolated="FALSE", 
     #                 symbol="ZROUSDT", amount=25.0, type="REPAY")
