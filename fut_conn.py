@@ -88,7 +88,10 @@ def close(cli):
     for pos in poss:
         ass = pos["symbol"]
         qt = float(pos["positionAmt"])
+        amt = float(pos["notional"])
         if abs(qt) <= 0.0:
+            continue
+        if (abs(amt) <= 10):
             continue
         
         print(trade(cli, ass, -qt))
