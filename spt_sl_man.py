@@ -8,11 +8,11 @@ from math import ceil
 import configparser
 import time
 
-CRIT_AMNT = 45000
+CRIT_AMNT = 38000
 keys = configparser.ConfigParser()
 keys.read("Keys.ini")
  
-CONTROL_ACCS = [1,2,3,4]
+CONTROL_ACCS = [1,2,3,4,5]
 KEYS         = [(
     keys[f"ACC_{id}"]["api_key"],
     keys[f"ACC_{id}"]["secret"]) for id in CONTROL_ACCS]
@@ -89,8 +89,9 @@ def trade(cli, symbol, qty):
 def repay(cli):
     inf = cli.margin_account()
     for ass in inf["userAssets"]:
+
         smbl = ass["asset"] + "USDT"
-        px = cli.avg_price(smbl)["price"]
+        px = float(cli.avg_price(smbl)["price"]) if ass["asset"] != "USDT" else 1.0
         borrAmt = float(ass["borrowed"]) * px
         if (borrAmt <= THR):
             continue
@@ -100,8 +101,8 @@ def repay(cli):
         intr = float(ass["interest"])
         
         # borr -= intr
-        if (free < borr + intr):
-            qty = adjToLotSz(smbl, borr + intr - free, True)
+        if (free < borr + intr and ass["asset"] != "USDT"):
+            qty = adjToLotSz(cli, smbl, borr + intr - free, True)
             try:
                 trade(cli, ass["asset"] + "USDT", qty)
             except Exception as e:
@@ -129,10 +130,10 @@ def clear_pos():
         for pos in res["userAssets"]:
             if pos["asset"] in NO_CLOSE:
                 continue
-            
-            amnt = float(pos["free"] - pos["borrowed"]) * 0.99
+            px = float(cli.avg_price(pos["asset"] + "USDT")["price"])
+            amnt = (float(pos["free"]) - float(pos["borrowed"])) * 0.99
 
-            if (amnt < THR):
+            if (amnt * px < THR):
                 continue
             print(f"Closing {pos['asset']} {amnt}")
             try:
