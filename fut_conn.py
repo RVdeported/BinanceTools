@@ -92,6 +92,7 @@ def trades(cli, instr):
         itm = [
           dt.datetime.fromtimestamp(int(tr["updateTime"]) // 1000), 
           tr["clientOrderId"],
+          tr["side"],
           tr["price"],
           tr["executedQty"],
           tr["origQty"]
@@ -99,7 +100,7 @@ def trades(cli, instr):
         rows.append(itm)
 
     rows = sorted(rows, key=lambda x: x[0], reverse=True)
-    tab = tabulate(rows, headers=["ts", "id", "px", "execQt", "origQt"])
+    tab = tabulate(rows, headers=["ts", "id", "side", "px", "execQt", "origQt"])
     return tab
 
 def close(cli):
