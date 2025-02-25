@@ -23,7 +23,7 @@ def get_px(cli: Client, ass):
 def acc_info(cli: Client):
     res = cli.account()
     positions = res["positions"]
-    out = "Instr\tQt\tAmnt\tupnl\n"
+    out = [["Instr", "Qt", "Amn", "tupnl"]]
 
     total_pnl       = 0.0
     total_assets    = 0.0
@@ -38,11 +38,13 @@ def acc_info(cli: Client):
             continue
 
         px = get_px(cli, ass)
-        out += ass + '\t' + str(qt) + '\t' + str(amt) + '\t' + str(pnl) + '\n'
+        out += [[ass, qt, amt, pnl]]
         total_pnl += pnl
         total_exposure += abs(amt)
-
-    out += '\nASSETS:\n'
+    
+    print(tabulate(out))
+    print("\nASSETS:\n")
+    out = []
     assets = res["assets"]
     for ass in assets:
         asset = ass["asset"]
@@ -51,23 +53,23 @@ def acc_info(cli: Client):
             continue
         px    = 1.0 if asset == "USDT" else get_px(cli, asset + "USDT")
         amt   = px * qt
-        out  += f"{asset}\t{qt}\t{amt}\n"
+        out  += [[asset, qt, amt]]
         total_assets += amt
         total_margin += float(ass["initialMargin"])
     
-    out += f"TOTAL EXPOSURE\t{total_exposure}\n"
-    out += f"TOTAL UPNL\t{total_pnl}\n"
-    out += f"TOTAL AVL ASSETS\t{total_assets}\n"
-    out += f"... WITH MARGIN\t{total_margin + total_assets}"
+    print(tabulate(out))
+    print(f"TOTAL EXPOSURE\t{total_exposure}")
+    print(f"TOTAL UPNL\t{total_pnl}")
+    print(f"TOTAL AVL ASSETS\t{total_assets}")
+    print(f"... WITH MARGIN\t{total_margin + total_assets}")
 
-    print(out)
-
-def trade(cli, ass, qt):
+def trade(cli, ass, qt, reduce=True):
     res = cli.new_order(
        symbol   = ass,
        type     = "MARKET",
        side     = "BUY" if qt > 0.0 else "SELL",
-       quantity = abs(qt)
+       quantity = abs(qt),
+       reduceOnly = "true" if reduce else "false"
     )
 
     return res
@@ -112,7 +114,7 @@ def close(cli):
         if (abs(amt) <= 10):
             continue
         
-        print(trade(cli, ass, -qt))
+        print(trade(cli, ass, -qt, True))
 
 def orders(cli):
     orders = cli.get_orders()
@@ -174,6 +176,8 @@ if __name__ == "__main__":
     elif (args[2] == "close"):
         close(client)
         acc_info(client)
+    elif (args[2] == "cancel"):
+        cancel(client)
     elif (args[2] == "orders"):
         orders(client)
     elif (args[2] == "reset"):
