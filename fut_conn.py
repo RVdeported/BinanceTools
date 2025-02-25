@@ -6,14 +6,15 @@ import re
 import os
 from math import ceil
 import configparser
-
+from tabulate import tabulate
+import datetime as dt
 
 reg = re.compile(r"PDCA::MakeOrders: Instr=([A-Z]{5,10}) Quoting Side=[a-zA-Z]{3}[\s\S].*Pos=(-{0,1}[\d]{1,6}\.{0,1}[\d]{0,10})")
 
 
 def help():
     print("USAGE: [api_key_set [command+args\norders\ncancel\ntrade [symbol [qty" + 
-            "\nclose\npositions\nlimit [symbol [qty [px\nposslim\n")
+            "\nclose\npositions\nlimit [symbol [qty [px\nposslim\ntrades [instr\n")
 
 def get_px(cli: Client, ass):
     res = cli.book_ticker(ass)
@@ -81,6 +82,23 @@ def limit(cli, ass, qt, px):
         quantity= abs(qt)
     )
     return res
+
+def trades(cli, instr):
+    res = cli.get_all_orders(symbol=instr)
+    rows = []
+    for tr in res:
+        itm = [
+          dt.datetime.fromtimestamp(int(tr["updateTime"]) // 1000), 
+          tr["clientOrderId"],
+          tr["price"],
+          tr["executedQty"],
+          tr["origQty"]
+        ]
+        rows.append(itm)
+
+    rows = sorted(rows, key=lambda x: x[0], reverse=True)
+    tab = tabulate(rows, headers=["ts", "id", "px", "execQt", "origQt"])
+    return tab
 
 def close(cli):
     acc = cli.account()
@@ -162,6 +180,11 @@ if __name__ == "__main__":
         cancel(client)
         close(client)
         acc_info(client)
+    elif (args[2] == "trades"):
+        if (len(args) < 4):
+            help()
+            exit(1)
+        print(trades(client, args[3]))
     else:
         help()
     
