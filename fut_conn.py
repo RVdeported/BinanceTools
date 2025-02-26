@@ -8,6 +8,8 @@ from math import ceil
 import configparser
 from tabulate import tabulate
 import datetime as dt
+import time
+import pandas as pd
 
 reg = re.compile(r"PDCA::MakeOrders: Instr=([A-Z]{5,10}) Quoting Side=[a-zA-Z]{3}[\s\S].*Pos=(-{0,1}[\d]{1,6}\.{0,1}[\d]{0,10})")
 
@@ -103,6 +105,38 @@ def trades(cli, instr):
     tab = tabulate(rows, headers=["ts", "id", "side", "px", "execQt", "origQt"])
     return tab
 
+def download_trades(cli):
+    res = cli.get_income_history()
+
+    instrs = set()
+    for n in res:
+        instrs.add(n["symbol"])
+
+    print(instrs)
+
+    df = pd.DataFrame(columns=["ts","instr","id","origQt","execQt","px","side"])
+    for inst in instrs:
+        res = cli.get_all_orders(inst)
+        for n in res:
+            d = {
+                "instr" : inst,
+                "id"    : n["clientOrderId"],
+                "ts"    : int(n["updateTime"]) // 1000,
+                "origQt": n["origQty"],
+                "execQt": n["executedQty"],
+                "px"    : n["price"],
+                "side"  : n["side"]
+            }
+            df = pd.concat([df, pd.DataFrame([d])], ignore_index=True)
+        
+        df = df.sort_values(by="ts", ascending=False)
+    
+    
+    df.to_csv("tmp.csv", index=False)
+    print(df)
+    
+
+
 def close(cli):
     acc = cli.account()
     poss = acc["positions"]
@@ -145,6 +179,7 @@ def cancel(cli):
     symbs = set([n["sym"] for n in ords])
     for sym in symbs:
         print(cli.cancel_open_orders(symbol=sym))
+    
 
 
 if __name__ == "__main__":
@@ -190,6 +225,8 @@ if __name__ == "__main__":
             help()
             exit(1)
         print(trades(client, args[3]))
+    elif (args[2] == "dwnl"):
+        download_trades(client)
     else:
         help()
     
