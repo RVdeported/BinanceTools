@@ -1,10 +1,11 @@
 from telegram import Update
 from telegram.ext import Application, ApplicationBuilder, CommandHandler, ContextTypes
-from acc_info import get_positions_str
+from acc_info import get_positions_str, clientUM
 import time
 import asyncio
 from close_all import close_positions
 import sys
+from fut_conn import download_trades
 
 UM = sys.argv[1] == "um"
 with open(sys.argv[2], "r") as f:
@@ -48,6 +49,10 @@ async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Upd Stop sent")
     return True
 
+def orders(update: Update, context: ContextTypes.DEFAULT_TYPE): 
+    download_trades(clientUM)
+    await update.bot.send_document(context.chat_data["user_id"],
+                                    open("tmp.csv", "r"))
 
 if len(sys.argv) != 3 or sys.argv[1] not in ["cm", "um"]:
     print("Choose cm or um and provide file with bot keys")
@@ -61,5 +66,6 @@ app.add_handler(CommandHandler("start", start))
 app.add_handler(CommandHandler("close_all", close))
 
 app.add_handler(CommandHandler("stop", stop))
+app.add_handler(CommandHandler("orders", ))
 
 app.run_polling()
