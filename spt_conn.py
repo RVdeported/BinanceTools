@@ -4,9 +4,9 @@ import time
 import sys
 import re
 import os
-from math import ceil
+from math import ceil, floor
 
-NO_CLOSE = ["BTC", "USDT", "BNB", "ETH"]
+NO_CLOSE = ["BTC", "USDT", "BNB",  "XVG"]
 NO_REPAY = []
 KLINES   = [
     "ZROUSDT", "LEVERUSDT", "PEPEUSDT", "CVXUSDT",  "HBARUSDT",
@@ -22,10 +22,22 @@ KLINES   = [
 ]
 
 api_key  = [
+    "eJsf2CNtp21edYLtA3diyEG39Xktuz3YxySK8IdWWbnCQPTwH1Qcg3pmfjqMYfxC",
+    "6T0BVo4v8iMu0DyHiT0q0VlpC7mgPEuQSJm3qtHaEuR2qwkhIrQzcWLaUOguv6OH",
+    "dBM25MkzatPe8zuQvRWleYlC6QtmbFo3ZM2z8dN94AcPZK5tddVcV8tbfOGIKsvN",
+    "D3KFR4BPCX2Mb1ovakqWjsV3vrSR3XPs5FUVLQAwnJVXZmuPM9Qkd9ZuPjgNnGR2",
+    "DU2WTVoCgmZPP2kK49y4RKivQjbccZrHetZzfe0CLapBrVY43vdCqvCOvJkfrhjV",
+    "2ssWzeMBKoiet5KOnaP9DPPPz04quJNC0hdUmtHwzwzf0rFX0jmAZhRjAVtPAZ7k",
 ]
 
 
 api_secret  = [
+    "8WunfLKWlfqprS9NQlaOBeHtmZvcyoxBIH9dltT9we1epbp1fcSe3qZNRGz8PCqm",
+    "nInIRztdCq4zoDR6183ddRc4tVFa9e8lhI0tKz9BzjloHtKlwsSsigE05TT5ejY8",
+    "8vtUVpuOzhIoZUK3M8pCKK7FfwAsOQAJxBf9BrvA1l6pYHcrl7Gye8Lj6hfhCvk4",
+    "a28ESzbTFRu79Aa0gnD4YhwpCGfbmNVugMT8CpVnEzjXtZpzW5G8orlrWyEusMLm",
+    "yeQ23SzjJboEFfRjSEMdooIeKIJmTdL2WnulOpTfq3EvCufKE5LoWSrTeoHlcOw3",
+    "4u6fxLnNeRhmsFIqxo7LYVzZ2RGpexln4gyN1wJAmgcFYUL11o9DeaLJSKUP4F0A",
 ]
 
 
@@ -33,6 +45,8 @@ reg = re.compile(r"PDCA::MakeOrders: Instr=([A-Z]{5,10}) Quoting Side=[a-zA-Z]{3
 
 PATH_LOGS = "~/Maquette/MAQUETTE-Strats/Logs/"
 # PATH_LOGS = "~/log_"
+
+MIN_POS = 6
 
 client = None 
 def mrg_info():
@@ -153,9 +167,11 @@ def adjToLotSz(symbol, qty, roundUp = False):
     if (lotSz <= 0):
         raise Exception(f"Could not determine {symbol} lotSz")
     
-    q = ceil(abs(qty) / lotSz) * lotSz
+    q = abs(qty)
     if (roundUp):
-        q = max(minNotional / px, q)
+        q = max(MIN_POS / px, q)   
+    q = floor(q / lotSz) * lotSz
+
     q *= -1.0 if qty < 0 else 1.0
 
     
@@ -211,17 +227,21 @@ def repay():
         free = float(ass["free"])
         intr = float(ass["interest"])
         
+        px = client.klines(ass["asset"] + "USDT", "1m", limit=1)[0][4]
+        if ((borr + intr) * float(px) < MIN_POS):
+            continue
+
         # borr -= intr
         if (free < borr + intr):
             smbl = ass["asset"] + "USDT"
-            qty = adjToLotSz(smbl, borr + intr - free, True)
+            qty = adjToLotSz(smbl, (borr + intr - free) * 1.02, True)
             trade(ass["asset"] + "USDT", qty, "MRG")
            
             time.sleep(1.5)
         
         if (borr <= 0.000001):
             return
-        borr = round(borr + intr, 9)
+        borr = round(borr + intr, 8)
 
         print(f"Repaying {ass['asset']} int amnt {borr}")
         
@@ -273,15 +293,21 @@ def help():
 
 if __name__ == "__main__":
     args = sys.argv
+
     if len(args) <= 2:
         help()
         exit()
-    
+
+
     client = Client(api_key[int(args[1])-1], api_secret[int(args[1])-1])
-   
+    # client.borrow_repay(asset="AMP", isIsolated="FALSE", 
+    #                 symbol="AMPUSDT", amount=9200, type="REPAY")
+    # exit(0) 
     args[2] = args[2].lower()
     # client.borrow_repay(asset="ZRO", isIsolated="FALSE", 
     #                 symbol="ZROUSDT", amount=25.0, type="REPAY")
+
+
     if   (args[2] == "resetspt"):
         pprint(reset("SPT"))
     elif   (args[2] == "resetmrg"):
