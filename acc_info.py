@@ -3,10 +3,11 @@ from binance.cm_futures import CMFutures
 import time
 from termcolor import colored
 import sys
+import configparser as cp
 
 INSTR_PRICE = {
-        "BTC" : 60000,
-        "ETH" : 3000,
+        "BTC" : 90000,
+        "ETH" : 3300,
         "DOGE": 0.1,
         "MATIC":0.45,
         "SOL" : 140,
@@ -22,16 +23,26 @@ INSTR_PRICE = {
     }
 
 
-def read_keys():
-    with open("keys.txt", "r") as f:
-        public = f.readline()[:-1]
-        secret = f.readline()[:-1]
+def read_keys(id):
+    conf = cp.ConfigParser()
+    conf.read("FutKeys.ini") 
+    
+    public = conf[f"ACC_{id}"]["api_key"]
+    secret = conf[f"ACC_{id}"]["secret"]
     return public, secret
 
-public, secret = read_keys()
+public, secret = read_keys(1)
 
 clientUM = UMFutures(key=public, secret=secret)
 clientCM = CMFutures(key=public, secret=secret)
+
+def set_client(id):
+    global clientUM, clientCM
+    public, secret = read_keys(id)
+
+    clientUM = UMFutures(key=public, secret=secret)
+    clientCM = CMFutures(key=public, secret=secret)
+
 
 def get_positions(UM):
     client = clientUM if UM else clientCM

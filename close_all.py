@@ -18,18 +18,23 @@ def display_help():
 def close_positions(UM):
     assets, _ = get_positions(UM)
     client = clientUM if UM else clientCM
+    instrs = []
     for pos in assets:
         symbol = pos["symbol"]
         side   = "SELL" if float(pos["positionAmt"]) > 0 else "BUY"
         qty    = abs(float(pos["positionAmt"]))
-        response = client.new_order(
-            symbol=symbol,
-            side=side,
-            type="MARKET",
-            quantity=qty
-        )
-        pprint(response)
-    instrs = instrsUM if UM else instrsCM
+        if (qty > 0):
+            instrs.append(symbol)
+            try:
+                response = client.new_order(
+                    symbol=symbol,
+                    side=side,
+                    type="MARKET",
+                    quantity=qty)
+                pprint(response)
+            except Exception as e:
+                print(e)
+        
     for instr in instrs:
         pprint(client.cancel_open_orders(instr))
 
