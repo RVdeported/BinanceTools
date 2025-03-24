@@ -139,6 +139,7 @@ def download_trades(cli):
 
 def close(cli):
     acc = cli.account()
+    pprint(acc)
     poss = acc["positions"]
     for pos in poss:
         ass = pos["symbol"]
@@ -203,7 +204,7 @@ if __name__ == "__main__":
         if (len(args) < 5):
             help()
             exit(0)
-        pprint(trade(client, args[3], float(args[4])))
+        pprint(trade(client, args[3], float(args[4]), False))
     elif (args[2] == "limit"):
         if (len(args) < 6):
             help()

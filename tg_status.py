@@ -1,11 +1,11 @@
 from telegram import Update
 from telegram.ext import Application, ApplicationBuilder, CommandHandler, ContextTypes
-from acc_info import get_positions_str, set_client, clientUM
+from acc_info import get_positions_str, set_client
 import time
 import asyncio
 from close_all import close_positions
 import sys
-from fut_conn import download_trades
+from fut_conn import download_trades, cancel, close as cls
 
 UM = sys.argv[1] == "um"
 with open(sys.argv[2], "r") as f:
@@ -34,7 +34,8 @@ def active(context):
     return True
 
 async def close(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    close_positions(UM)
+    cancel(clientUM)
+    cls(clientUM)
     await context.bot.send_message(context.chat_data["user_id"], 
             text="Closing orders submitted")
 
@@ -58,7 +59,7 @@ if len(sys.argv) != 4 or sys.argv[1] not in ["cm", "um"]:
     print("Choose cm or um and provide file with bot keys")
     exit(0)
 
-set_client(int(sys.argv[3]))
+clientUM, _ = set_client(int(sys.argv[3]))
 
 app = Application.builder().token(keys).build()
 

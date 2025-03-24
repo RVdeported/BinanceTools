@@ -42,6 +42,7 @@ def set_client(id):
 
     clientUM = UMFutures(key=public, secret=secret)
     clientCM = CMFutures(key=public, secret=secret)
+    return clientUM, clientCM
 
 
 def get_positions(UM):
@@ -53,6 +54,7 @@ def get_positions(UM):
 
 def get_positions_str(UM = True, col = False):
     assets, acc_info = get_positions(UM)
+    cli = clientUM if UM else clientCM
     out = ""
     if UM:
         out +="Available Balance: {}\tUPNL:{}\tWithMargin: {}\n".format(
@@ -60,14 +62,13 @@ def get_positions_str(UM = True, col = False):
                 float(acc_info["availableBalance"]) + 
                 float(acc_info["totalInitialMargin"]))
     for n in assets:
-        instr_short = n["symbol"][:n["symbol"].find("USD")]
-        upnl        = float(n["unrealizedProfit"]) * \
-            (1.0 if UM else INSTR_PRICE[instr_short])
-        notional    = float(n["positionAmt"]) * (1.0 if UM else
+        px          = float(cli.book_ticker(n["symbol"])["askPrice"])
+        upnl        = float(n["unrealizedProfit"]) 
+        notional    = float(n["positionAmt"]) * (px if UM else
                             (100 if n["symbol"] == "BTCUSD_PERP" else 10))
         upnl_perc   = upnl / abs(notional) * 100
-        s = "{}:\tentryPx:{}\tAmnt:{}\tUPNL:{:.2f}({:.2f}%)\tNotional:{}\n"\
-                .format(n["symbol"], n["entryPrice"],n["positionAmt"], 
+        s = "{}:\tAmnt:{}\tUPNL:{:.2f}({:.2f}%)\tNotional:{}\n"\
+                .format(n["symbol"],n["positionAmt"], 
                         upnl, upnl_perc, notional 
                         )        
         color = "green" if float(n["positionAmt"]) > 0 else "yellow"
