@@ -2,3 +2,4 @@ binance-futures-connector
 termcolor
 python-telegram-bot[job-queue]
 configparser
+pybit
