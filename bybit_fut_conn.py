@@ -42,12 +42,12 @@ def acc_info(cli: HTTP):
         total_exposure += abs(amt)
     
 
-    res = cli.get_wallet_balance(accountType="UNIFIED")
-    pprint(res)
-    print(tabulate(out))
-    print("\nASSETS:\n")
+    wb = cli.get_wallet_balance(accountType="UNIFIED")
+    outs  = tabulate(out)
+    outs +="\nASSETS:\n"
+
     out = []
-    assets = res["result"]["list"][0]["coin"]
+    assets = wb["result"]["list"][0]["coin"]
     for ass in assets:
         asset = ass["coin"]
         qt    = float(ass["walletBalance"])
@@ -55,11 +55,14 @@ def acc_info(cli: HTTP):
         out  += [[asset, qt, amt]]
         total_assets += amt
         total_margin += float(ass["totalPositionIM"])
+    
+    outs += tabulate(out)
+    outs += f"\nTOTAL EXPOSURE\t{total_exposure}\n"
+    outs += f"TOTAL UPNL\t{total_pnl}\n"
+    outs += f"TOTAL AVL ASSETS\t{total_assets}\n"
 
-    print(tabulate(out))
-    print(f"TOTAL EXPOSURE\t{total_exposure}")
-    print(f"TOTAL UPNL\t{total_pnl}")
-    print(f"TOTAL AVL ASSETS\t{total_assets}")
+    print(outs)
+    return res, wb, outs
 
 
 def trade(cli: HTTP, ass, qt, reduce=True):
@@ -114,7 +117,9 @@ def close(cli):
         if (abs(amt) <= 5):
             continue
         
-        print(trade(cli, ass, -qt, True))
+        res = trade(cli, ass, -qt, True)
+        print(res)
+        return res
 
 def orders(cli):
     orders = cli.get_open_orders(
@@ -171,9 +176,9 @@ if __name__ == "__main__":
         close(cli)
         acc_info(cli)
     elif (args[2] == "cancel"):
-        cancel(cli)
+        print(cancel(cli))
     elif (args[2] == "orders"):
-        orders(cli)
+        print(orders(cli))
     elif (args[2] == "reset"):
         cancel(cli)
         close(cli)
