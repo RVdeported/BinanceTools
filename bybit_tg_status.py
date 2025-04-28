@@ -6,14 +6,14 @@ import sys
 from bybit_fut_conn import acc_info, cancel, close as cls, acc_info, HTTP
 import configparser as cp
 
-CLI = None
+CLIS = None
 ACTIVE = False
 
     
 
 async def status(context):
     await context.bot.send_message(context.chat_data["user_id"], 
-            text=acc_info(CLI)[2])
+            text=acc_info(CLIS)[2])
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     print(update.effective_chat.id)
@@ -33,8 +33,8 @@ def active(context):
     return True
 
 async def close(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    cancel(CLI)
-    cls(CLI)
+    cancel(CLIS)
+    cls(CLIS)
     await context.bot.send_message(context.chat_data["user_id"], 
             text="Closing orders submitted")
 
@@ -58,9 +58,23 @@ with open(sys.argv[2], "r") as f:
 id  = sys.argv[1] 
 keys = cp.ConfigParser()
 keys.read("FutKeys.ini")
-api = keys[f"ACC_{id}"]["api_key"]
-sec = keys[f"ACC_{id}"]["secret"]
-CLI = HTTP(testnet=False, api_key=api, api_secret=sec)
+
+CLIS = []
+if (id == "a"):
+    id = 1
+    while True:
+        k = f"ACC_{id}"
+        if k not in keys:
+            break
+        api = keys[f"ACC_{id}"]["api_key"]
+        sec = keys[f"ACC_{id}"]["secret"]
+        CLIS.append(HTTP(testnet=False, api_key=api, api_secret=sec))
+        id += 1
+else:
+    api = keys[f"ACC_{id}"]["api_key"]
+    sec = keys[f"ACC_{id}"]["secret"]
+    CLIS.append(HTTP(testnet=False, api_key=api, api_secret=sec))
+
 
 app = Application.builder().token(bot_keys).build()
 
