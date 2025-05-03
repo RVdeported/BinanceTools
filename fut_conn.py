@@ -199,6 +199,7 @@ def orders(clis):
 
     
     out = tabulate(rows, headers=["AccId", "OrdId", "Instr", "Px", "Qty"])
+    print(out)
 
     return rows
 
