@@ -22,87 +22,117 @@ def get_px(cli: Client, ass):
     res = cli.book_ticker(ass)
     return float(res["askPrice"])
 
-def acc_info(cli: Client):
-    res = cli.account()
-    positions = res["positions"]
-    out = [["Instr", "Qt", "Amn", "tupnl"]]
-
+def acc_info(clis: list[Client]):
+    poss = {}
+    ress= []
     total_pnl       = 0.0
     total_assets    = 0.0
     total_exposure  = 0.0
     total_margin    = 0.0
-    for pos in positions:
-        ass = pos["symbol"]
-        qt = float(pos["positionAmt"])
-        amt= float(pos["notional"])
-        pnl= float(pos["unrealizedProfit"])
-        if abs(qt) <= 0.0:
-            continue
-
-        px = get_px(cli, ass)
-        out += [[ass, qt, amt, pnl]]
-        total_pnl += pnl
-        total_exposure += abs(amt)
     
-    print(tabulate(out))
-    print("\nASSETS:\n")
-    out = []
-    assets = res["assets"]
-    for ass in assets:
-        asset = ass["asset"]
-        qt    = float(ass["availableBalance"])
-        if (qt <= 0.0):
-            continue
-        px    = 1.0 if asset == "USDT" else get_px(cli, asset + "USDT")
-        amt   = px * qt
-        out  += [[asset, qt, amt]]
-        total_assets += amt
-        total_margin += float(ass["initialMargin"])
-    
-    print(tabulate(out))
-    print(f"TOTAL EXPOSURE\t{total_exposure}")
-    print(f"TOTAL UPNL\t{total_pnl}")
-    print(f"TOTAL AVL ASSETS\t{total_assets}")
-    print(f"... WITH MARGIN\t{total_margin + total_assets}")
+    for cli in clis:
+        res = cli.account()
+        ress.append(res)
+        positions = res["positions"]
 
-def trade(cli, ass, qt, reduce=True):
-    res = cli.new_order(
-       symbol   = ass,
-       type     = "MARKET",
-       side     = "BUY" if qt > 0.0 else "SELL",
-       quantity = abs(qt),
-       reduceOnly = "true" if reduce else "false"
-    )
+        for pos in positions:
+            ass = pos["symbol"]
+            qt = float(pos["positionAmt"])
+            amt= float(pos["notional"])
+            pnl= float(pos["unrealizedProfit"])
+            if abs(qt) <= 0.0:
+                continue
 
-    return res
+            px = get_px(cli, ass)
+            total_pnl += pnl
+            total_exposure += abs(amt)
+            
+            if ass not in poss:
+                poss[ass] = [qt, amt, pnl]
+            else:
+                poss[ass][0] += qt
+                poss[ass][1] += amt
+                poss[ass][2] += pnl
 
-def limit(cli, ass, qt, px):
-    res = cli.new_order(
-        symbol  = ass,
-        type    = "LIMIT",
-        timeInForce = "GTC",
-        price   = px,
-        side    = "BUY" if qt > 0.0 else "SELL",
-        quantity= abs(qt)
-    )
-    return res
+    # wbs = []
+    assets={}
+    for i, cli in enumerate(clis):
+        asss = ress[i]["assets"]
+        for ass in asss:
+            asset = ass["asset"]
+            qt    = float(ass["availableBalance"])
+            if (qt <= 0.0):
+                continue
+            px    = 1.0 if asset == "USDT" else get_px(cli, asset + "USDT")
+            amt   = px * qt
+            total_assets += amt
+            total_margin += float(ass["initialMargin"])
+            
+            if asset not in assets:
+                assets[asset] = [qt, amt]
+            else:
+                assets[asset][0] += qt
+                assets[asset][1] += amt
+        
+    outs  = tabulate([[k, *v] for k,v in poss.items()],
+                     headers = ["Sym", "Qt", "Amnt", "Upnl"])
+    outs += "\nASSETS:\n"
+    outs += tabulate([[k, *v] for k,v in assets.items()], 
+                     headers = ["Sym", "Qt", "Amnt"])
+    outs += f"\n\nTOTAL EXPOSURE\t{total_exposure}\n"
+    outs += f"TOTAL UPNL\t{total_pnl}\n"
+    outs += f"TOTAL AVL ASSETS\t{total_assets}\n"
+    outs += f"... WITH MARGIN\t{total_margin + total_assets}\n"
 
-def trades(cli, instr):
-    res = cli.get_all_orders(symbol=instr)
+    print(outs)
+    return ress, None, outs
+
+def trade(clis, ass, qt, reduce=True):
+    ress = []
+    for cli in clis:
+        res = cli.new_order(
+           symbol   = ass,
+           type     = "MARKET",
+           side     = "BUY" if qt > 0.0 else "SELL",
+           quantity = abs(qt),
+           reduceOnly = "true" if reduce else "false"
+        )
+        ress.append(res)
+
+    return ress
+
+def limit(clis, ass, qt, px):
+    ress = []
+    for cli in clis:
+        res = cli.new_order(
+            symbol  = ass,
+            type    = "LIMIT",
+            timeInForce = "GTC",
+            price   = px,
+            side    = "BUY" if qt > 0.0 else "SELL",
+            quantity= abs(qt)
+        )
+        ress.append(res)
+    return ress
+
+def trades(clis, instr):
     rows = []
-    for tr in res:
-        itm = [
-          dt.datetime.fromtimestamp(int(tr["updateTime"]) // 1000), 
-          tr["clientOrderId"],
-          tr["side"],
-          tr["price"],
-          tr["executedQty"],
-          tr["origQty"]
-        ]
-        rows.append(itm)
+    for i, cli in enumerate(clis):
+        res = cli.get_all_orders(symbol=instr)
+        for tr in res:
+            itm = [
+              i+1,
+              dt.datetime.fromtimestamp(int(tr["updateTime"]) // 1000), 
+              tr["clientOrderId"],
+              tr["side"],
+              tr["price"],
+              tr["executedQty"],
+              tr["origQty"]
+            ]
+            rows.append(itm)
 
-    rows = sorted(rows, key=lambda x: x[0], reverse=True)
-    tab = tabulate(rows, headers=["ts", "id", "side", "px", "execQt", "origQt"])
+    rows = sorted(rows, key=lambda x: x[1], reverse=True)
+    tab = tabulate(rows, headers=["ids", "ts", "id", "side", "px", "execQt", "origQt"])
     return tab
 
 def download_trades(cli):
@@ -137,49 +167,49 @@ def download_trades(cli):
     
 
 
-def close(cli):
-    acc = cli.account()
-    pprint(acc)
-    poss = acc["positions"]
-    for pos in poss:
-        ass = pos["symbol"]
-        qt = float(pos["positionAmt"])
-        amt = float(pos["notional"])
-        if abs(qt) <= 0.0:
-            continue
-        if (abs(amt) <= 10):
-            continue
-        
-        print(trade(cli, ass, -qt, True))
+def close(clis):
+    ress = []
+    for cli in clis:
+        acc = cli.account()
+        poss = acc["positions"]
+        for pos in poss:
+            ass = pos["symbol"]
+            qt = float(pos["positionAmt"])
+            amt = float(pos["notional"])
+            if abs(qt) <= 0.0:
+                continue
+            if (abs(amt) <= 10):
+                continue
+            ress.append(trade([cli], ass, -qt, True))
+    return ress
 
-def orders(cli):
-    orders = cli.get_orders()
-    out = "Symbol\tqt\tpx\tid\n"
-    ords = []
-    for ord in orders:
-        sym = ord["symbol"]
-        qt  = float(ord["origQty"]) - float(ord["executedQty"])
-        if (ord["side"] == "SELL"):
-            qt *= -1
-        px  = float(ord["price"])
-        id  = ord["clientOrderId"]
-        
-        ords.append({
-            "px": px,
-            "qt": qt,
-            "sym": sym})
+def orders(clis):
+    rows = []
+    for i, cli in enumerate(clis):
+        orders = cli.get_orders()
+        for ord in orders:
+            sym = ord["symbol"]
+            qt  = float(ord["origQty"]) - float(ord["executedQty"])
+            if (ord["side"] == "SELL"):
+                qt *= -1
+            px  = float(ord["price"])
+            id  = ord["clientOrderId"]
+            
+            rows.append([i+1, id, sym, px, qt])
 
-        out += f"{sym}\t{qt}\t{px}\t{id}\n"
-        
-    print(out)
+    
+    out = tabulate(rows, headers=["AccId", "OrdId", "Instr", "Px", "Qty"])
 
-    return ords
+    return rows
 
-def cancel(cli):
-    ords = orders(cli)
-    symbs = set([n["sym"] for n in ords])
-    for sym in symbs:
-        print(cli.cancel_open_orders(symbol=sym))
+def cancel(clis):
+    ress = []
+    for cli in clis:
+        ords = orders([cli])
+        symbs = set([n[2] for n in ords])
+        for sym in symbs:
+            ress.append(cli.cancel_open_orders(symbol=sym))
+    return ress
     
 
 
@@ -189,45 +219,58 @@ if __name__ == "__main__":
         help()
         exit()
     
-    id = int(args[1])
+    id = args[1]
     keys = configparser.ConfigParser()
     keys.read("FutKeys.ini")
-    api = keys[f"ACC_{id}"]["api_key"]
-    sec = keys[f"ACC_{id}"]["secret"]
+     
+    clis = []
+    if (id == "a"):
+        id = 1
+        while True:
+            k = f"ACC_{id}"
+            if k not in keys:
+                break
+            api = keys[f"ACC_{id}"]["api_key"]
+            sec = keys[f"ACC_{id}"]["secret"]
+            clis.append(Client(api, sec))
+            id += 1
+    else:
+        api = keys[f"ACC_{id}"]["api_key"]
+        sec = keys[f"ACC_{id}"]["secret"]
+        clis.append(Client(api, sec))
 
-    client = Client(api, sec)
-    
+
     args[2] = args[2].lower()
     if     (args[2] == "posslim"):
-        acc_info(client)
+        acc_info(clis)
     elif (args[2] == "trade"):
         if (len(args) < 5):
             help()
             exit(0)
-        pprint(trade(client, args[3], float(args[4]), False))
+        pprint(trade(clis, args[3], float(args[4]), False))
     elif (args[2] == "limit"):
         if (len(args) < 6):
             help()
             exit(0)
-        pprint(limit(client, args[3], float(args[4]), float(args[5])))
+        pprint(limit(clis, args[3], float(args[4]), float(args[5])))
     elif (args[2] == "close"):
-        close(client)
-        acc_info(client)
+        print(close(clis))
+        acc_info(clis)
     elif (args[2] == "cancel"):
-        cancel(client)
+        print(cancel(clis))
     elif (args[2] == "orders"):
-        orders(client)
+        print(orders(clis))
     elif (args[2] == "reset"):
-        cancel(client)
-        close(client)
-        acc_info(client)
+        print(cancel(clis))
+        print(close(clis))
+        acc_info(clis)
     elif (args[2] == "trades"):
         if (len(args) < 4):
             help()
             exit(1)
-        print(trades(client, args[3]))
+        print(trades(clis, args[3]))
     elif (args[2] == "dwnl"):
-        download_trades(client)
+        download_trades(clis)
     else:
         help()
     
