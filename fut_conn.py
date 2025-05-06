@@ -212,7 +212,20 @@ def cancel(clis):
             ress.append(cli.cancel_open_orders(symbol=sym))
     return ress
     
-
+def trans(cli):
+    end  = int((dt.datetime.now()).timestamp() * 1000)
+    t    = int(end - 3600 * 24 * 30 * 1000)
+    end -= 60000
+    df = pd.DataFrame([])
+    while (t < end):
+        res = cli.get_income_history(limit=1000, startTime=t)
+        if (len(res) < 2):
+            break
+        
+        df = pd.concat([df, pd.DataFrame(res)])
+        t = df.iloc[-1]["time"] + 1
+    
+    df.to_csv("trans.csv")
 
 if __name__ == "__main__":
     args = sys.argv
@@ -260,7 +273,7 @@ if __name__ == "__main__":
     elif (args[2] == "cancel"):
         print(cancel(clis))
     elif (args[2] == "orders"):
-        print(orders(clis))
+        orders(clis)
     elif (args[2] == "reset"):
         print(cancel(clis))
         print(close(clis))
@@ -272,6 +285,8 @@ if __name__ == "__main__":
         print(trades(clis, args[3]))
     elif (args[2] == "dwnl"):
         download_trades(clis)
+    elif (args[2] == "trans"):
+        trans(clis[0])
     else:
         help()
     
